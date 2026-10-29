@@ -13,7 +13,7 @@ Dự án được hoàn thiện toàn diện qua các chương:
 ## 1. Yêu Cầu Môi Trường
 
 - **Node.js:** Phiên bản `>= 20.x` (khuyến nghị Node 22 LTS).
-- **pnpm:** Quản lý gói thư viện (phiên bản `10.x`).
+- **pnpm:** Trình quản lý package duy nhất của project (phiên bản `10.x`); không dùng npm/npx.
 - **Cơ sở dữ liệu:** Microsoft SQL Server 2022 (chạy cục bộ trên Windows hoặc qua Docker container).
 - **Docker & Docker Compose:** Phục vụ chạy container hóa (Lab 3).
 
@@ -22,8 +22,8 @@ Dự án được hoàn thiện toàn diện qua các chương:
 ## 2. Cấu Hình Biến Môi Trường
 
 1. Sao chép file cấu hình mẫu `.env.example` thành `.env`:
-   ```bash
-   cp .env.example .env
+   ```powershell
+   Copy-Item .env.example .env
    ```
 2. Cập nhật các thông số phù hợp với môi trường chạy thực tế:
    - Khi chạy trực tiếp trên Windows: `DB_HOST=127.0.0.1`
