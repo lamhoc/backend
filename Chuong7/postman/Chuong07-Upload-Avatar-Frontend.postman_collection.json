@@ -1,0 +1,443 @@
+{
+    "info":  {
+                 "_postman_id":  "c07-upload-avatar-frontend-collection",
+                 "name":  "ChÆ°Æ¡ng 07 - Upload Avatar Multer \u0026 CORS Frontend",
+                 "description":  "Bá»™ kiá»ƒm thá»­ 12 ca test Upload Avatar (U01 - U12) cho ChÆ°Æ¡ng 07: Multer, JWT, Express Static, CORS",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:5000"
+                     },
+                     {
+                         "key":  "studentToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "adminToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "uploadedAvatarUrl",
+                         "value":  ""
+                     }
+                 ],
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "// Tá»± Ä‘á»™ng Ä‘Äƒng nháº­p láº¥y studentToken náº¿u biáº¿n Ä‘ang rá»—ng",
+                                                  "var token = pm.variables.get(\u0027studentToken\u0027);",
+                                                  "if (!token || token.trim() === \u0027\u0027) {",
+                                                  "    var baseUrl = pm.variables.get(\u0027baseUrl\u0027) || \u0027http://localhost:5000\u0027;",
+                                                  "    pm.sendRequest({",
+                                                  "        url: baseUrl + \u0027/api/auth/login\u0027,",
+                                                  "        method: \u0027POST\u0027,",
+                                                  "        header: { \u0027Content-Type\u0027: \u0027application/json\u0027 },",
+                                                  "        body: {",
+                                                  "            mode: \u0027raw\u0027,",
+                                                  "            raw: JSON.stringify({ email: \u0027an.lab@example.com\u0027, password: \u0027SinhVien@123\u0027 })",
+                                                  "        }",
+                                                  "    }, function (err, res) {",
+                                                  "        if (!err \u0026\u0026 res.code === 200) {",
+                                                  "            var data = res.json();",
+                                                  "            pm.collectionVariables.set(\u0027studentToken\u0027, data.data.accessToken);",
+                                                  "            pm.environment.set(\u0027studentToken\u0027, data.data.accessToken);",
+                                                  "        }",
+                                                  "    });",
+                                                  "}"
+                                              ]
+                                 }
+                  }
+              ],
+    "item":  [
+                 {
+                     "name":  "00. Setup - Login Student",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Login student thÃ nh cÃ´ng 200\", function () { pm.response.to.have.status(200); });",
+                                                                   "var json = pm.response.json();",
+                                                                   "pm.environment.set(\"studentToken\", json.data.accessToken);",
+                                                                   "pm.collectionVariables.set(\"studentToken\", json.data.accessToken);"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/login",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "login"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U01 - Upload Avatar PNG há»£p lá»‡",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                                                                   "var json = pm.response.json();",
+                                                                   "pm.expect(json.data).to.have.property(\u0027avatarUrl\u0027);",
+                                                                   "pm.environment.set(\"uploadedAvatarUrl\", json.data.avatarUrl);",
+                                                                   "pm.collectionVariables.set(\"uploadedAvatarUrl\", json.data.avatarUrl);"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+                                                                   {
+                                                                       "key":  "avatar",
+                                                                       "type":  "file",
+                                                                       "src":  [
+
+                                                                               ]
+                                                                   }
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U02 - Xem áº£nh tÄ©nh qua URL phá»¥c vá»¥ tÄ©nh",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"áº¢nh tÄ©nh tráº£ vá» 200\", function () { pm.response.to.have.status(200); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}{{uploadedAvatarUrl}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "{{uploadedAvatarUrl}}"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U03 - Upload khÃ´ng cÃ³ Bearer Token (pháº£i cháº·n 401)",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Thiáº¿u token bá»‹ cháº·n 401\", function () { pm.response.to.have.status(401); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+                                                                   {
+                                                                       "key":  "avatar",
+                                                                       "type":  "file",
+                                                                       "src":  [
+
+                                                                               ]
+                                                                   }
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U04 - Upload vá»›i Token sai chá»¯ kÃ½ (pháº£i cháº·n 401)",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Token sai bá»‹ cháº·n 401\", function () { pm.response.to.have.status(401); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}FakeSignature"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+                                                                   {
+                                                                       "key":  "avatar",
+                                                                       "type":  "file",
+                                                                       "src":  [
+
+                                                                               ]
+                                                                   }
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U05 - Upload thiáº¿u file trong body (pháº£i cháº·n 400)",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Thiáº¿u file tráº£ vá» 400\", function () { pm.response.to.have.status(400); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U06 - Upload sai tÃªn field photo thay vÃ¬ avatar (pháº£i cháº·n 400)",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Sai field name tráº£ vá» 400\", function () { pm.response.to.have.status(400); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+                                                                   {
+                                                                       "key":  "photo",
+                                                                       "type":  "file",
+                                                                       "src":  [
+
+                                                                               ]
+                                                                   }
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U07 - Upload file vÆ°á»£t quÃ¡ 2MB (pháº£i tráº£ 413)",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"QuÃ¡ 2MB tráº£ vá» 413 Payload Too Large\", function () { pm.response.to.have.status(413); });"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "formdata",
+                                                  "formdata":  [
+                                                                   {
+                                                                       "key":  "avatar",
+                                                                       "type":  "file",
+                                                                       "src":  [
+
+                                                                               ]
+                                                                   }
+                                                               ]
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/me/avatar",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "me",
+                                                              "avatar"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "U12 - GET Profile xÃ¡c nháº­n cÃ³ avatarUrl má»›i",
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "exec":  [
+                                                                   "pm.test(\"Profile cÃ³ avatarUrl\", function () {",
+                                                                   "    pm.response.to.have.status(200);",
+                                                                   "    var json = pm.response.json();",
+                                                                   "    pm.expect(json.data.avatarUrl).to.not.be.null;",
+                                                                   "});"
+                                                               ],
+                                                      "type":  "text/javascript"
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{studentToken}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/auth/profile",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "auth",
+                                                              "profile"
+                                                          ]
+                                             }
+                                 }
+                 }
+             ]
+}
