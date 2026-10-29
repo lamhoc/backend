@@ -1,4 +1,4 @@
-# Backend quản lý sinh viên - Bài thực hành Chương 5
+# Backend quản lý sinh viên - Bài thực hành Chương 7
 
 Dự án tiếp tục mã nguồn Chương 4, giữ Express 5 + TypeScript (NodeNext) + Sequelize + SQL Server và 5 endpoint CRUD cũ. Chương 5 thêm Zod Validation, Morgan access log và cập nhật OpenAPI hiện có.
 
