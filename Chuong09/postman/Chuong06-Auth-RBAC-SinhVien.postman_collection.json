@@ -1,0 +1,570 @@
+{
+  "info": {
+    "_postman_id": "c06-auth-rbac-collection-quan-ly-sinh-vien",
+    "name": "Chương 06 - JWT Auth & RBAC Quản lý sinh viên",
+    "description": "Bộ kiểm thử 24 ca test A01-A12 và B01-B12 cho Chương 6: Authentication & Authorization (Express, TypeScript, SQL Server, JWT, RBAC)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "studentToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "testMaSV", "value": "SV098" }
+  ],
+  "item": [
+    {
+      "name": "01. Auth & JWT (A01 - A12)",
+      "item": [
+        {
+          "name": "A01 - Register student mới hợp lệ",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"User được tạo với role student\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.role).to.eql('student');",
+                  "    pm.expect(json.data).to.not.have.property('passwordHash');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Minh An\",\n  \"email\": \"an.lab@example.com\",\n  \"password\": \"SinhVien@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "A02 - Register trùng email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Trùng email trả về 409 Conflict\", function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Minh An Clone\",\n  \"email\": \"an.lab@example.com\",\n  \"password\": \"SinhVien@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "A03 - Register có role=admin (phải chặn 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bị Zod chặn 400 khi truyền role lạ\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Hacker Attacker\",\n  \"email\": \"hacker@example.com\",\n  \"password\": \"Hacker@123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "A04 - Register thiếu password hoặc email sai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Dữ liệu sai định dạng trả về 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Invalid User\",\n  \"email\": \"invalid-email-format\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          }
+        },
+        {
+          "name": "A05 - Login đúng tài khoản student (lưu token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Đăng nhập thành công trả về 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Lưu studentToken vào biến môi trường\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('accessToken');",
+                  "    pm.environment.set(\"studentToken\", json.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"an.lab@example.com\",\n  \"password\": \"SinhVien@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "A06 - Login sai password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Sai password trả về 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"an.lab@example.com\",\n  \"password\": \"SaiMatKhau@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "A07 - Login email không tồn tại",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Email không tồn tại trả về 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"khongtontai@example.com\",\n  \"password\": \"BatKy@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "A08 - GET profile không có token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Không token bị chặn 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        },
+        {
+          "name": "A09 - GET profile token bị sửa chữ ký",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Token giả mạo bị chặn 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}abcFakeSignature" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        },
+        {
+          "name": "A10 - GET profile token student hợp lệ",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Xem profile thành công 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Hồ sơ không có passwordHash\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('email');",
+                  "    pm.expect(json.data).to.not.have.property('passwordHash');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        },
+        {
+          "name": "Login Admin (Lấy adminToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Admin đăng nhập thành công 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Lưu adminToken\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('accessToken');",
+                  "    pm.environment.set(\"adminToken\", json.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. SinhVien RBAC (B01 - B12)",
+      "item": [
+        {
+          "name": "B01 - GET danh sách không cần token (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"GET public thành công trả về 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Dữ liệu là mảng\", function () { pm.expect(pm.response.json().data).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B02 - POST sinh viên không token (Chặn 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Đúng chuẩn bị chặn quyền (401 hoặc 403)\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"{{testMaSV}}\",\n  \"hoTen\": \"Test No Auth\",\n  \"email\": \"noauth@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B03 - PUT sinh viên token không hợp lệ (Chặn 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Đúng chuẩn bị chặn quyền (401 hoặc 403)\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer tokenSaiSaiSai" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Test Update\",\n  \"email\": \"update@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/{{testMaSV}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "{{testMaSV}}"] }
+          }
+        },
+        {
+          "name": "B04 - DELETE sinh viên bằng student token (Chặn 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Student bị chặn quyền 403 Forbidden\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/SV001", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "SV001"] }
+          }
+        },
+        {
+          "name": "B05 - POST sinh viên bằng student token (Chặn 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Student bị chặn quyền 403 Forbidden\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"{{testMaSV}}\",\n  \"hoTen\": \"Student Add\",\n  \"email\": \"studentadd@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B06 - PUT sinh viên bằng student token (Chặn 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Student bị chặn quyền 403 Forbidden\", function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Student Update Attempt\",\n  \"email\": \"studentup@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/SV001", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "SV001"] }
+          }
+        },
+        {
+          "name": "B07 - POST sinh viên hợp lệ bằng admin token (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thao tác thành công mã 201\", function () { pm.response.to.have.status(201); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"{{testMaSV}}\",\n  \"hoTen\": \"Sinh Vien Lab Chuong 6\",\n  \"email\": \"sv098.lab@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B08 - PUT sinh viên hợp lệ bằng admin token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thao tác thành công mã 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Sinh Vien Lab Chuong 6 Updated\",\n  \"email\": \"sv098.updated@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/{{testMaSV}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "{{testMaSV}}"] }
+          }
+        },
+        {
+          "name": "B09 - DELETE sinh viên bằng admin token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thao tác thành công mã 200\", function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/{{testMaSV}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "{{testMaSV}}"] }
+          }
+        },
+        {
+          "name": "B10 - Admin POST body sai Zod (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Body sai Zod trả về 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"INVALID_CODE\",\n  \"hoTen\": \"\",\n  \"email\": \"not-an-email\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B11 - Admin POST mã trùng (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Trùng mã trả về 409 Conflict\", function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV001\",\n  \"hoTen\": \"Trung Ma\",\n  \"email\": \"trungma@example.com\",\n  \"maLop\": \"25CT114\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "B12 - Admin DELETE cùng mã lần thứ 2 (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Xóa lại bản ghi đã xóa trả về 404\", function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/{{testMaSV}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "{{testMaSV}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

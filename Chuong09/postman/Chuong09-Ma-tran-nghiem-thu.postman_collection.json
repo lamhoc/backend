@@ -1,0 +1,413 @@
+{
+  "info": {
+    "_postman_id": "ch09-acceptance-matrix",
+    "name": "Chương 09 - Ma trận nghiệm thu API (S, D, R)",
+    "description": "Collection cho các ca Security S01-S07, API trong Docker D01-D09 và Regression R01-R04. Unit Testing T01-T05 phải chạy bằng Jest; API Testing A01-A07 phải chạy bằng Supertest. R05 cần kiểm tra thao tác trên Frontend; Docker Compose ps/logs/volume persistence phải có minh chứng terminal riêng. Xem README trong collection để biết điều kiện và cách chạy.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "adminEmail", "value": "" },
+    { "key": "adminPassword", "value": "" },
+    { "key": "wrongPassword", "value": "" },
+    { "key": "studentEmail", "value": "" },
+    { "key": "studentPassword", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "studentToken", "value": "" },
+    { "key": "rateLimitAttempt", "value": "0" },
+    { "key": "crudMaSV", "value": "" },
+    { "key": "crudHoTen", "value": "" },
+    { "key": "crudEmail", "value": "" },
+    { "key": "crudHoTenUpdated", "value": "" },
+    { "key": "crudEmailUpdated", "value": "" },
+    { "key": "maLop", "value": "" },
+    { "key": "studentMaSV", "value": "" },
+    { "key": "searchTerm", "value": "Anh" },
+    { "key": "avatarPath", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00. Chuẩn bị token",
+      "description": "Chạy Login Admin và Login Student trước các ca cần quyền. Chỉ nhập thông tin tài khoản trong Environment/Variables; không ghi mật khẩu hay token vào script.",
+      "item": [
+        {
+          "name": "Login Admin - Lưu adminToken",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Admin login trả 200', function () { pm.response.to.have.status(200); });",
+            "const body = pm.response.json();",
+            "pm.test('Lưu accessToken của Admin', function () {",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.data.user.role).to.eql('admin');",
+            "    pm.expect(body.data.accessToken).to.be.a('string').and.not.empty;",
+            "    pm.environment.set('adminToken', body.data.accessToken);",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "Login Student - Lưu studentToken",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Student login trả 200', function () { pm.response.to.have.status(200); });",
+            "const body = pm.response.json();",
+            "pm.test('Lưu accessToken của Student', function () {",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.data.user.role).to.eql('student');",
+            "    pm.expect(body.data.accessToken).to.be.a('string').and.not.empty;",
+            "    pm.environment.set('studentToken', body.data.accessToken);",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        }
+      ]
+    },
+    {
+      "name": "01. Security S01-S07",
+      "item": [
+        {
+          "name": "S01-S02 - Rate Limit: 5 lần thường, lần 6 là 429",
+          "description": "Collection Runner: chọn riêng request này, Iterations=6. Đặt rateLimitAttempt=0; dùng cùng client/IP; không có request Login khác trong 60 giây trước đó.",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const attempt = (Number(pm.environment.get('rateLimitAttempt')) || 0) + 1;",
+              "pm.environment.set('rateLimitAttempt', String(attempt));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const attempt = Number(pm.environment.get('rateLimitAttempt'));",
+              "if (attempt <= 5) {",
+              "    pm.test(`S01 - Login lần ${attempt}/5 được xử lý`, function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "} else {",
+              "    pm.test('S02 - Lần thứ 6 nhận HTTP 429 và body lỗi chuẩn', function () {",
+              "        pm.response.to.have.status(429);",
+              "        const body = pm.response.json();",
+              "        pm.expect(body.success).to.eql(false);",
+              "        pm.expect(body.status).to.eql(429);",
+              "        pm.expect(body.message).to.be.a('string').and.not.empty;",
+              "        pm.expect(body.data).to.eql(null);",
+              "    });",
+              "}"
+            ] } }
+          ],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "S03 - Login sau khi cửa sổ 60 giây hết hạn",
+          "description": "Chạy riêng sau ít nhất 60 giây kể từ khi vượt hạn mức; đặt rateLimitAttempt=0. Kỳ vọng hạn mức mới cho phép request.",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('S03 - Login sau reset không bị giới hạn', function () {",
+            "    pm.response.to.have.status(200);",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "S04 - GET SinhVien không bị Login limiter",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('S04 - GET danh sách vẫn trả 200', function () { pm.response.to.have.status(200); });",
+            "pm.expect(pm.response.json().data).to.be.an('array');"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=1&limit=10" }
+        },
+        {
+          "name": "S05 - Helmet security headers",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('S05 - X-Content-Type-Options nosniff', function () { pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });",
+            "pm.test('S05 - Content-Security-Policy có giá trị', function () { pm.expect(pm.response.headers.get('Content-Security-Policy')).to.be.a('string').and.not.empty; });",
+            "pm.test('S05 - X-Frame-Options và Referrer-Policy có giá trị', function () {",
+            "    pm.expect(pm.response.headers.get('X-Frame-Options')).to.be.a('string').and.not.empty;",
+            "    pm.expect(pm.response.headers.get('Referrer-Policy')).to.be.a('string').and.not.empty;",
+            "});",
+            "pm.test('S05 - HSTS khi kết nối HTTPS', function () {",
+            "    if (pm.request.url.toString().startsWith('https://')) {",
+            "        pm.expect(pm.response.headers.get('Strict-Transport-Security')).to.match(/max-age=\\d+/i);",
+            "    } else { console.info('HSTS chỉ được kiểm tra khi request dùng HTTPS.'); }",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien" }
+        },
+        {
+          "name": "S06 - Login sai: 401, không có accessToken",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('S06 - Login sai trả 401 và body lỗi chuẩn', function () {",
+            "    pm.response.to.have.status(401);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(401);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "    pm.expect(body).not.to.have.nested.property('data.accessToken');",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{wrongPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "S07 - Student DELETE bị RBAC từ chối 403",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('S07 - Student nhận HTTP 403 và body lỗi', function () {",
+            "    pm.response.to.have.status(403);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(403);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "DELETE", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/v1/sinh-vien/{{studentMaSV}}" }
+        }
+      ]
+    },
+    {
+      "name": "02. Docker D01-D09 (API checks)",
+      "description": "D01-D09 kiểm tra HTTP/API. Docker Compose ps, SQL healthcheck, logs và dữ liệu còn sau recreate phải chụp/lưu từ terminal; Postman không thể chứng minh thay các thao tác đó.",
+      "item": [
+        {
+          "name": "D01 - Backend container phản hồi health",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D01 - Backend health trả 200', function () { pm.response.to.have.status(200); });",
+            "pm.expect(pm.response.json().data.status).to.eql('ok');"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "D02-D03 - API đọc danh sách từ Database",
+          "description": "Đây là kiểm tra API có truy vấn dữ liệu; xác nhận SQL container healthy vẫn cần docker compose ps/healthcheck.",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D02-D03 - API truy vấn DB trả 200 và data/pagination', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.data).to.be.an('array');",
+            "    pm.expect(body.pagination.totalItems).to.be.a('number');",
+            "    pm.expect(body.pagination.page).to.be.a('number');",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=1&limit=10" }
+        },
+        {
+          "name": "D04 - Login đúng trong môi trường Docker",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D04 - Login Docker trả 200 và JWT', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.data.accessToken).to.be.a('string').and.not.empty;",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "D05 - Login sai trong môi trường Docker",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D05 - Login sai trả 401, không cấp token', function () {",
+            "    pm.response.to.have.status(401);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(401);",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{wrongPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "D06 - Rate Limit Docker",
+          "description": "Dùng đúng cách chạy Runner S01-S02: chỉ request này, Iterations=6, rateLimitAttempt=0; chờ qua cửa sổ 60 giây nếu đã gửi Login trước đó.",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const attempt = (Number(pm.environment.get('rateLimitAttempt')) || 0) + 1;", "pm.environment.set('rateLimitAttempt', String(attempt));"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const attempt = Number(pm.environment.get('rateLimitAttempt'));",
+              "if (attempt < 6) { pm.test(`D06 - Login lần ${attempt} được xử lý`, function () { pm.response.to.have.status(200); }); }",
+              "else { pm.test('D06 - Lần 6 bị chặn 429', function () { pm.response.to.have.status(429); pm.expect(pm.response.json().status).to.eql(429); }); }"
+            ] } }
+          ],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "D07 - Pagination page=2 limit=2",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D07 - Pagination đúng page và limit', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.pagination.page).to.eql(2);",
+            "    pm.expect(body.pagination.limit).to.eql(2);",
+            "    pm.expect(body.data).to.be.an('array').and.have.length.at.most(2);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=2&limit=2" }
+        },
+        {
+          "name": "D08 - Profile thiếu JWT",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D08 - Profile thiếu JWT trả 401 và lỗi chuẩn', function () {",
+            "    pm.response.to.have.status(401);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(401);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "{{baseUrl}}/api/auth/profile" }
+        },
+        {
+          "name": "D09 - Error response không lộ thông tin nhạy cảm",
+          "description": "Dùng lỗi validation an toàn (400). Lỗi 500 thực tế cần kiểm tra thêm qua server logs và môi trường production; không cố tình làm hỏng database để tạo 500.",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('D09 - Validation trả lỗi chuẩn, không lộ stack/secret', function () {",
+            "    pm.response.to.have.status(400);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(400);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "    pm.expect(JSON.stringify(body)).not.to.match(/JWT_SECRET|DB_PASSWORD|passwordHash|stack/i);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=-1" }
+        }
+      ]
+    },
+    {
+      "name": "03. Regression R01-R05",
+      "description": "R01-R04 là các kiểm tra API có thể chạy bằng Postman. R05 Frontend: mở Vite app, thử Login/Axios/danh sách/chuyển trang bằng trình duyệt; không thể xác nhận tương tác UI chỉ bằng Postman.",
+      "item": [
+        {
+          "name": "R01.1 - Admin POST tạo sinh viên test",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R01.1 - Admin tạo sinh viên trả 201', function () {",
+            "    pm.response.to.have.status(201);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.data.maSV).to.eql(pm.environment.get('crudMaSV'));",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"maSV\": \"{{crudMaSV}}\",\n  \"hoTen\": \"{{crudHoTen}}\",\n  \"email\": \"{{crudEmail}}\",\n  \"maLop\": \"{{maLop}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/v1/sinh-vien" }
+        },
+        {
+          "name": "R01.2 - GET xác nhận sinh viên đã tạo",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R01.2 - GET sinh viên test trả đúng mã', function () {",
+            "    pm.response.to.have.status(200);",
+            "    pm.expect(pm.response.json().data.maSV).to.eql(pm.environment.get('crudMaSV'));",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien/{{crudMaSV}}" }
+        },
+        {
+          "name": "R01.3 - Admin PUT cập nhật sinh viên test",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R01.3 - Admin cập nhật trả 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.data.hoTen).to.eql(pm.environment.get('crudHoTenUpdated'));",
+            "    pm.expect(body.data.email).to.eql(pm.environment.get('crudEmailUpdated'));",
+            "});"
+          ] } }],
+          "request": { "method": "PUT", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"hoTen\": \"{{crudHoTenUpdated}}\",\n  \"email\": \"{{crudEmailUpdated}}\",\n  \"maLop\": \"{{maLop}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/v1/sinh-vien/{{crudMaSV}}" }
+        },
+        {
+          "name": "R01.4 - Admin DELETE sinh viên test",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R01.4 - Admin xóa trả 200', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "});"
+          ] } }],
+          "request": { "method": "DELETE", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] }, "url": "{{baseUrl}}/api/v1/sinh-vien/{{crudMaSV}}" }
+        },
+        {
+          "name": "R01.5 - GET sau DELETE xác nhận đã xóa",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R01.5 - Bản ghi đã xóa không còn tồn tại', function () {",
+            "    pm.response.to.have.status(404);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(404);",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien/{{crudMaSV}}" }
+        },
+        {
+          "name": "R02.1 - Pagination page=2 limit=2",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R02.1 - Pagination response đúng', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.pagination.page).to.eql(2);",
+            "    pm.expect(body.pagination.limit).to.eql(2);",
+            "    pm.expect(body.pagination.totalItems).to.be.a('number');",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=2&limit=2" }
+        },
+        {
+          "name": "R02.2 - Search theo tên",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R02.2 - Search trả 200 và cấu trúc danh sách', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.data).to.be.an('array');",
+            "    pm.expect(body.pagination).to.be.an('object');",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?search={{searchTerm}}" }
+        },
+        {
+          "name": "R03.1 - Validation page=-1 trả 400",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R03.1 - Validation trả HTTP 400 và lỗi chuẩn', function () {",
+            "    pm.response.to.have.status(400);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(400);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien?page=-1" }
+        },
+        {
+          "name": "R03.2 - GET mã sinh viên không tồn tại trả 404",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R03.2 - Not found trả 404 và lỗi chuẩn', function () {",
+            "    pm.response.to.have.status(404);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(false);",
+            "    pm.expect(body.status).to.eql(404);",
+            "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+            "    pm.expect(body.data).to.eql(null);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sinh-vien/SV999" }
+        },
+        {
+          "name": "R04.1 - Upload Avatar (chọn file trong Postman)",
+          "description": "Authorization Bearer {{studentToken}}. Body form-data: field avatar, chọn file JPEG/PNG hợp lệ nhỏ hơn 2MB. Chọn file cục bộ sau khi import collection.",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R04.1 - Upload trả 200 và avatarUrl', function () {",
+            "    pm.response.to.have.status(200);",
+            "    const body = pm.response.json();",
+            "    pm.expect(body.success).to.eql(true);",
+            "    pm.expect(body.data.avatarUrl).to.include('/uploads/');",
+            "    pm.environment.set('avatarPath', body.data.avatarUrl);",
+            "});"
+          ] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }] }, "body": { "mode": "formdata", "formdata": [{ "key": "avatar", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/api/auth/me/avatar" }
+        },
+        {
+          "name": "R04.2 - GET Avatar đã upload",
+          "description": "Chạy sau R04.1; xác nhận file được phục vụ. Persistence sau restart/recreate cần chạy lại request sau khi khởi động container.",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('R04.2 - File Avatar truy cập được', function () {",
+            "    pm.expect(pm.response.code).to.eql(200);",
+            "    pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//i);",
+            "});"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}{{avatarPath}}" }
+        }
+      ]
+    }
+  ]
+}

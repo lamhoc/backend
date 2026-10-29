@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-test/
+coverage/
+.env
+.env.*
+!.env.example
+postman/Backend-QuanLySinhVien-Local.postman_environment.json
+logs/*.log
+!logs/.gitkeep
+*.log

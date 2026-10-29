@@ -1,0 +1,1031 @@
+{
+  "info": {
+    "_postman_id": "5d1bbeb5-c3c6-4f14-92d8-9b8c0f049ede",
+    "name": "Buoi 5 - CRUD SinhVien + Chuong 5 Validation & Morgan",
+    "description": "Collection kiểm thử theo Bài thực hành Chương 4 RESTful CRUD & Swagger. Chạy lần lượt từ T01 đến T12 bằng Collection Runner. Trước khi chạy: bảo đảm SV003, SV004 và SV9999 chưa tồn tại; mã lớp 25CT114 phải hợp lệ trong database. Nếu khác, chỉnh Collection Variables. Database dùng SQL Server phải cho phép tạo/xóa sinh viên thử nghiệm. Một số test dùng pm.sendRequest để GET xác minh dữ liệu mà không thêm request ngoài 12 test case.\n\nChuong 5: chay folder \"Chuong 5 - Validation & Morgan (V01-V12)\" sau khi cau hinh baseUrl, maLop hop le va database thu nghiem. V01 can SV006 chua ton tai; V08 can V01 da tao SV006. V12 nen chay rieng sau khi restart server.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "T01 - GET danh sách",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien",
+        "description": "Kỳ vọng 200; success=true; data là mảng."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T01 - GET danh sách trả 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('T01 - success=true và data là mảng', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(true);",
+              "  pm.expect(json.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T02 - POST tạo SV003",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien",
+        "description": "Tạo sinh viên mới; trước khi chạy cần bảo đảm maSV (mặc định SV003) chưa tồn tại và maLop (mặc định 25CT114) hợp lệ.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"maSV\": \"{{maSV}}\",\n  \"hoTen\": \"{{hoTen}}\",\n  \"email\": \"{{email}}\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T02 - POST hợp lệ trả 201', () => {",
+              "  pm.response.to.have.status(201);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(true);",
+              "  pm.expect(json.data.maSV).to.eql(pm.collectionVariables.get('maSV'));",
+              "  pm.expect(json.data.hoTen).to.eql(pm.collectionVariables.get('hoTen'));",
+              "  pm.expect(json.data.email).to.eql(pm.collectionVariables.get('email'));",
+              "  pm.expect(json.data.maLop).to.eql(pm.collectionVariables.get('maLop'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T03 - POST trùng mã",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien",
+        "description": "Gửi lại cùng mã sinh viên; kỳ vọng 409 Conflict.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"maSV\": \"{{maSV}}\",\n  \"hoTen\": \"{{hoTen}}\",\n  \"email\": \"{{email}}\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T03 - POST trùng mã trả 409', () => {",
+              "  pm.response.to.have.status(409);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "  pm.expect(json.data).to.eql(null);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T04 - POST thiếu hoTen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien",
+        "description": "Body thiếu hoTen; kỳ vọng 400 và không tạo bản ghi.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"maSV\": \"{{maSVInvalid}}\",\n  \"email\": \"{{email}}\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T04 - POST thiếu hoTen trả 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "});",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const invalidId = encodeURIComponent(pm.collectionVariables.get('maSVInvalid'));",
+              "pm.sendRequest({ url: `${baseUrl}/api/v1/sinh-vien/${invalidId}`, method: 'GET', header: { Accept: 'application/json' } }, (err, res) => {",
+              "  pm.test('T04 - POST sai không tạo bản ghi', () => {",
+              "    pm.expect(err).to.eql(null);",
+              "    pm.expect(res.code).to.eql(404);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T05 - GET SV003 sau tạo",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Kiểm tra sinh viên vừa tạo tồn tại và có đủ bốn trường đúng."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T05 - GET chi tiết trả 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(true);",
+              "  pm.expect(json.data.maSV).to.eql(pm.collectionVariables.get('maSV'));",
+              "  pm.expect(json.data.hoTen).to.eql(pm.collectionVariables.get('hoTen'));",
+              "  pm.expect(json.data.email).to.eql(pm.collectionVariables.get('email'));",
+              "  pm.expect(json.data.maLop).to.eql(pm.collectionVariables.get('maLop'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T06 - PUT cập nhật SV003",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Cập nhật đủ hoTen, email, maLop; đồng thời GET kiểm tra dữ liệu đã được lưu thật.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hoTen\": \"{{hoTenUpdated}}\",\n  \"email\": \"{{emailUpdated}}\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T06 - PUT hợp lệ trả 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(true);",
+              "  pm.expect(json.data.hoTen).to.eql(pm.collectionVariables.get('hoTenUpdated'));",
+              "  pm.expect(json.data.email).to.eql(pm.collectionVariables.get('emailUpdated'));",
+              "  pm.expect(json.data.maLop).to.eql(pm.collectionVariables.get('maLop'));",
+              "});",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const id = encodeURIComponent(pm.collectionVariables.get('maSV'));",
+              "pm.sendRequest({ url: `${baseUrl}/api/v1/sinh-vien/${id}`, method: 'GET', header: { Accept: 'application/json' } }, (err, res) => {",
+              "  pm.test('T06 - GET xác nhận dữ liệu sau PUT', () => {",
+              "    pm.expect(err).to.eql(null);",
+              "    pm.expect(res.code).to.eql(200);",
+              "    const json = res.json();",
+              "    pm.expect(json.data.hoTen).to.eql(pm.collectionVariables.get('hoTenUpdated'));",
+              "    pm.expect(json.data.email).to.eql(pm.collectionVariables.get('emailUpdated'));",
+              "    pm.expect(json.data.maLop).to.eql(pm.collectionVariables.get('maLop'));",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T07 - PUT thiếu email",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Body thiếu email; kỳ vọng 400 và dữ liệu đã cập nhật trước đó không đổi.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hoTen\": \"Tên không hợp lệ\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T07 - PUT thiếu email trả 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "});",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const id = encodeURIComponent(pm.collectionVariables.get('maSV'));",
+              "pm.sendRequest({ url: `${baseUrl}/api/v1/sinh-vien/${id}`, method: 'GET', header: { Accept: 'application/json' } }, (err, res) => {",
+              "  pm.test('T07 - dữ liệu cũ không đổi sau PUT sai', () => {",
+              "    pm.expect(err).to.eql(null);",
+              "    pm.expect(res.code).to.eql(200);",
+              "    const json = res.json();",
+              "    pm.expect(json.data.hoTen).to.eql(pm.collectionVariables.get('hoTenUpdated'));",
+              "    pm.expect(json.data.email).to.eql(pm.collectionVariables.get('emailUpdated'));",
+              "    pm.expect(json.data.maLop).to.eql(pm.collectionVariables.get('maLop'));",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T08 - PUT mã không tồn tại",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSVNotFound}}",
+        "description": "Cập nhật một mã chưa tồn tại; kỳ vọng 404 và không tạo bản ghi.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hoTen\": \"Sinh viên không tồn tại\",\n  \"email\": \"missing@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T08 - PUT mã không tồn tại trả 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "});",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const id = encodeURIComponent(pm.collectionVariables.get('maSVNotFound'));",
+              "pm.sendRequest({ url: `${baseUrl}/api/v1/sinh-vien/${id}`, method: 'GET', header: { Accept: 'application/json' } }, (err, res) => {",
+              "  pm.test('T08 - PUT không tạo mã mới', () => {",
+              "    pm.expect(err).to.eql(null);",
+              "    pm.expect(res.code).to.eql(404);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T09 - GET mã không tồn tại",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSVNotFound}}",
+        "description": "Mã không tồn tại; kỳ vọng 404 và data=null."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T09 - GET mã không tồn tại trả 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "  pm.expect(json.data).to.eql(null);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T10 - DELETE SV003",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Xóa sinh viên thử nghiệm; kỳ vọng 200, success=true và response không có data."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T10 - DELETE thành công trả 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(true);",
+              "  pm.expect(json.message).to.eql('Xóa sinh viên thành công');",
+              "  pm.expect(json).to.not.have.property('data');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T11 - GET SV003 sau xóa",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Xác nhận sinh viên đã bị xóa; kỳ vọng 404."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T11 - GET sau DELETE trả 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "  pm.expect(json.data).to.eql(null);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "T12 - DELETE SV003 lần hai",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sinh-vien/{{maSV}}",
+        "description": "Xóa lại mã đã bị xóa; kỳ vọng 404."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('T12 - DELETE lần hai trả 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.success).to.eql(false);",
+              "  pm.expect(json.data).to.eql(null);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Chuong 5 - Validation & Morgan (V01-V12)",
+      "description": "Chạy các request theo thứ tự. Trước khi chạy trên SQL Server thử nghiệm: maLop phải tồn tại, SV006 chưa tồn tại, và database không chứa dữ liệu thật cần bảo vệ. V12 cần restart server thủ công trước khi chạy.",
+      "item": [
+        {
+          "name": "V01 - POST hợp lệ SV006",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Cần bảo đảm SV006 chưa tồn tại và maLop trỏ đến lớp thật trong database thử nghiệm.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV006\",\n  \"hoTen\": \"Nguyễn Minh An\",\n  \"email\": \"minhan@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V01 - Trả 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Body thành công và có SV006', () => { pm.expect(body.success).to.eql(true); pm.expect(body.data.maSV).to.eql('SV006'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V02 - POST thiếu hoTen",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Body thiếu trường bắt buộc hoTen.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV007\",\n  \"email\": \"minhan7@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V02 - Trả 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('V02 - Đúng mẫu lỗi Validation', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data).to.eql(null); pm.expect(body.errors).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V03 - POST email sai định dạng",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Dữ liệu sai phải bị từ chối trước Controller.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV008\",\n  \"hoTen\": \"Nguyễn Minh An\",\n  \"email\": \"sai-email\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V03 - Trả 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('V03 - errors chỉ ra email', () => pm.expect(body.errors.some((e) => e.field === 'email')).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V04 - POST có trường lạ role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Schema .strict() phải từ chối role do Client tự gửi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV009\",\n  \"hoTen\": \"Nguyễn Minh An\",\n  \"email\": \"minhan9@example.com\",\n  \"maLop\": \"{{maLop}}\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V04 - Trả 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('V04 - errors chỉ ra role', () => pm.expect(body.errors.some((e) => e.field === 'role')).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V05 - PUT thiếu email",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien/SV006",
+            "description": "Sau khi request trả 400, gọi GET SV006 và so sánh dữ liệu với trước khi test; bản ghi không được thay đổi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Dữ liệu không được phép cập nhật\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V05 - Trả 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('V05 - Có chi tiết lỗi', () => { pm.expect(body.success).to.eql(false); pm.expect(body.errors).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V06 - PUT hợp lệ SV006",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien/SV006",
+            "description": "Chạy sau V01 và sau khi V05 đã xác minh dữ liệu cũ được bảo toàn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Nguyễn Minh An Updated\",\n  \"email\": \"an.updated@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V06 - Trả 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('V06 - Dữ liệu được cập nhật', () => { pm.expect(body.success).to.eql(true); pm.expect(body.data.hoTen).to.eql('Nguyễn Minh An Updated'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V07 - PUT email sai kiểu (number)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien/SV006",
+            "description": "Email gửi bằng số phải trả 400, không sửa bản ghi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Dữ liệu không được phép cập nhật\",\n  \"email\": 123,\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V07 - Trả 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('V07 - Có lỗi Validation', () => { pm.expect(body.success).to.eql(false); pm.expect(body.errors).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V08 - POST mã SV006 đã tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Cần chạy V01 thành công trước; lỗi trùng mã vẫn do Service/Database xử lý với 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV006\",\n  \"hoTen\": \"Nguyễn Minh An\",\n  \"email\": \"minhan@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V08 - Trả 409', () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test('V08 - Từ chối mã trùng', () => pm.expect(body.success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V09 - PUT mã không tồn tại SV9999",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien/SV9999",
+            "description": "Body hợp lệ nhưng mã không tồn tại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hoTen\": \"Nguyễn Minh An Updated\",\n  \"email\": \"an.updated@example.com\",\n  \"maLop\": \"{{maLop}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V09 - Trả 404', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('V09 - Không tìm thấy bản ghi', () => { pm.expect(body.success).to.eql(false); pm.expect(body.data).to.eql(null); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V10 - GET danh sách sau Validation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/sinh-vien",
+            "description": "Kiểm tra hồi quy: danh sách vẫn trả về mảng."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V10 - Trả 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('V10 - data là mảng', () => pm.expect(body.data).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V11 - GET health và kiểm tra log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/health",
+            "description": "Sau request, mở logs/access.log và xác nhận có method GET, URL /health và status 200."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V11 - Health trả 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('V11 - Server đang hoạt động', () => pm.expect(body.data.status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V12 - GET health sau khi restart server",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/health",
+            "description": "Bước thủ công: restart server trước khi chạy request này, sau đó xác nhận dòng log cũ vẫn còn và dòng GET mới được ghi nối."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('V12 - Health trả 200 sau restart', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('V12 - Server đang hoạt động', () => pm.expect(body.data.status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string",
+      "description": "Đổi cổng nếu server chạy ở cổng khác."
+    },
+    {
+      "key": "maSV",
+      "value": "SV003",
+      "type": "string",
+      "description": "Mã sinh viên dùng cho T02-T07, T10-T12; phải chưa tồn tại lúc chạy T02."
+    },
+    {
+      "key": "maSVInvalid",
+      "value": "SV004",
+      "type": "string",
+      "description": "Mã dùng cho POST thiếu hoTen; nên là mã chưa tồn tại."
+    },
+    {
+      "key": "maSVNotFound",
+      "value": "SV9999",
+      "type": "string",
+      "description": "Mã phải không tồn tại để kiểm tra 404."
+    },
+    {
+      "key": "maLop",
+      "value": "25CT114",
+      "type": "string",
+      "description": "Phải là mã lớp có thật nếu database có khóa ngoại."
+    },
+    {
+      "key": "hoTen",
+      "value": "Ngọc Mai",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "ngocmai@example.com",
+      "type": "string"
+    },
+    {
+      "key": "hoTenUpdated",
+      "value": "Ngọc Mai Updated",
+      "type": "string"
+    },
+    {
+      "key": "emailUpdated",
+      "value": "ngocmai@example.com",
+      "type": "string"
+    },
+    {
+      "key": "maSVValidation",
+      "value": "SV006",
+      "type": "string",
+      "description": "Mã dùng trong bộ Validation; cần chưa tồn tại trước V01."
+    },
+    {
+      "key": "missingMaSV",
+      "value": "SV9999",
+      "type": "string",
+      "description": "Mã không tồn tại để kiểm tra PUT 404."
+    }
+  ]
+}

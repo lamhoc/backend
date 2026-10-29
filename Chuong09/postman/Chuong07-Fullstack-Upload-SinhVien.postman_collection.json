@@ -1,0 +1,268 @@
+{
+  "info": {
+    "_postman_id": "c07-fullstack-upload-collection",
+    "name": "Chương 07 - Upload Avatar & Kết nối Frontend - Backend",
+    "description": "Bộ kiểm thử tự động 12 ca test Upload Avatar (U01-U12) và các API tích hợp của Chương 7",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "studentToken", "value": "" },
+    { "key": "adminToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01. Auth Login (Lấy Token)",
+      "item": [
+        {
+          "name": "Login Student (Lấy studentToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login thành công 200\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.environment.set(\"studentToken\", json.data.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"an.lab@example.com\",\n  \"password\": \"SinhVien@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Upload Avatar (U01 - U12)",
+      "item": [
+        {
+          "name": "U01/U02 - Upload Avatar hợp lệ có Student JWT (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Upload thành công trả về 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Trả về avatarUrl hợp lệ\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('avatarUrl');",
+                  "    pm.expect(json.data.avatarUrl).to.include('/uploads/');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U03 - Upload không có Authorization (Chặn 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thiếu token bị chặn 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U04 - Upload với JWT sai / hết hạn (Chặn 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"JWT sai chữ ký bị chặn 401\", function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer FakeTokenInvalidSignature" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U05 - Upload thiếu file ảnh (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thiếu file trả về 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U06 - Field name sai 'photo' thay vì 'avatar' (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Sai field name trả về 400\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "photo", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U07 - Kích thước file lớn hơn 2MB (Bắt 413)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"File > 2MB trả về mã 413 Payload Too Large\", function () { pm.response.to.have.status(413); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U08 - File giả mạo đuôi txt -> png (Bắt Magic Bytes 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"File giả mạo bị chặn 400 do sai Magic Bytes\", function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U11 - Gửi userId người khác trong body (Chỉ cập nhật cho chính mình)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Thao tác trả về 200 hoặc 400, không sửa người khác\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 400]); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": [] },
+                { "key": "userId", "value": "9999", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        },
+        {
+          "name": "U12 - GET profile kiểm tra avatarUrl",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Xem profile thành công 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Profile có chứa avatarUrl\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('avatarUrl');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+
