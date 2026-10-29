@@ -1,0 +1,758 @@
+{
+  "info": {
+    "_postman_id": "c08-pagination-search-errors",
+    "name": "Chương 08 - Pagination, Search & Global Error Handling",
+    "description": "Bộ kiểm thử tự động 17 ca test phân trang/tìm kiếm (P01-P17) và 10 ca test xử lý lỗi & hồi quy bảo mật (E01-E10) theo đúng giáo trình Chương 08",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "studentToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "studentEmail", "value": "" },
+    { "key": "studentPassword", "value": "" },
+    { "key": "adminEmail", "value": "" },
+    { "key": "adminPassword", "value": "" },
+    { "key": "testMaSV", "value": "SV001" }
+  ],
+  "item": [
+    {
+      "name": "00. Auth Setup (Lấy Token kiểm thử)",
+      "item": [
+        {
+          "name": "Login Student (Lấy studentToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Lấy accessToken student thành công\", function () {",
+                  "    pm.expect(json.data).to.have.property('accessToken');",
+                  "    pm.collectionVariables.set('studentToken', json.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Admin (Lấy adminToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Lấy accessToken admin thành công\", function () {",
+                  "    pm.expect(json.data).to.have.property('accessToken');",
+                  "    pm.collectionVariables.set('adminToken', json.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Pagination & Search (P01 - P17)",
+      "item": [
+        {
+          "name": "P01 - GET danh sách mặc định (page=1, limit=10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"data là mảng\", function () { pm.expect(json.data).to.be.an('array'); });",
+                  "pm.test(\"Pagination mặc định page=1, limit=10\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(1);",
+                  "    pm.expect(json.pagination.limit).to.eql(10);",
+                  "    pm.expect(json.pagination).to.have.property('totalItems');",
+                  "    pm.expect(json.pagination).to.have.property('totalPages');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"] }
+          }
+        },
+        {
+          "name": "P02 - GET page=1&limit=2 (Tối đa 2 bản ghi đầu)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Tối đa 2 bản ghi\", function () { pm.expect(json.data.length).to.be.at.most(2); });",
+                  "pm.test(\"Pagination page=1, limit=2\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(1);",
+                  "    pm.expect(json.pagination.limit).to.eql(2);",
+                  "});",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.collectionVariables.set(\"p02FirstMaSV\", json.data[0].maSV);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=1&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P03 - GET page=2&limit=2 (Trang 2 không trùng trang 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Pagination page=2, limit=2\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(2);",
+                  "    pm.expect(json.pagination.limit).to.eql(2);",
+                  "});",
+                  "var p02FirstMaSV = pm.collectionVariables.get(\"p02FirstMaSV\");",
+                  "if (p02FirstMaSV && json.data && json.data.length > 0) {",
+                  "    pm.test(\"Không trùng bản ghi với trang 1\", function () {",
+                  "        var maSVs = json.data.map(function(s) { return s.maSV; });",
+                  "        pm.expect(maSVs).to.not.include(p02FirstMaSV);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=2&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "2"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P04 - GET page=3&limit=2 (Trang cuối có thể ít hơn 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"data là mảng\", function () { pm.expect(json.data).to.be.an('array'); });",
+                  "pm.test(\"Pagination page=3, limit=2\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(3);",
+                  "    pm.expect(json.pagination.limit).to.eql(2);",
+                  "    pm.expect(json.pagination).to.have.property('totalPages');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=3&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "3"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P05 - GET page=999&limit=2 (Trang vượt quá trả data rỗng)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Data là mảng rỗng\", function () { pm.expect(json.data).to.eql([]); });",
+                  "pm.test(\"TotalItems vẫn chính xác\", function () { pm.expect(json.pagination.totalItems).to.be.a('number'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=999&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "999"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P06 - GET page=-1 (Chặn page âm 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Page âm trả về 400\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=-1", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "-1"}] }
+          }
+        },
+        {
+          "name": "P07 - GET page=0 (Chặn page=0 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Page=0 trả về 400\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=0", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "0"}] }
+          }
+        },
+        {
+          "name": "P08 - GET page=1.5 (Chặn page thập phân 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Page thập phân trả về 400\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=1.5", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "1.5"}] }
+          }
+        },
+        {
+          "name": "P09 - GET limit=abc (Chặn limit không phải số 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Limit chữ trả về 400\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?limit=abc", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "limit", "value": "abc"}] }
+          }
+        },
+        {
+          "name": "P10 - GET limit=51 (Chặn limit vượt quá 50 trả 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Limit vượt 50 trả về 400\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?limit=51", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "limit", "value": "51"}] }
+          }
+        },
+        {
+          "name": "P11 - GET search=Anh (Lọc theo họ tên chứa 'Anh')",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Data là mảng sinh viên\", function () { pm.expect(json.data).to.be.an('array'); });",
+                  "pm.test(\"Mọi sinh viên trả về đều có họ tên chứa từ khóa tìm kiếm\", function () {",
+                  "    json.data.forEach(function(sv) {",
+                  "        pm.expect(sv.hoTen.toLowerCase()).to.include('anh');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?search=Anh", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "search", "value": "Anh"}] }
+          }
+        },
+        {
+          "name": "P12 - GET search=Anh&page=2&limit=2 (totalItems theo kết quả lọc)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Pagination page=2, limit=2\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(2);",
+                  "    pm.expect(json.pagination.limit).to.eql(2);",
+                  "});",
+                  "pm.test(\"totalItems là số lượng bản ghi lọc theo search\", function () {",
+                  "    pm.expect(json.pagination.totalItems).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?search=Anh&page=2&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "search", "value": "Anh"}, {"key": "page", "value": "2"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P13 - GET search=khongco (Từ khóa không tồn tại trả rỗng)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Data rỗng và totalItems = 0\", function () {",
+                  "    pm.expect(json.data).to.eql([]);",
+                  "    pm.expect(json.pagination.totalItems).to.eql(0);",
+                  "    pm.expect(json.pagination.totalPages).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?search=khongco", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "search", "value": "khongco"}] }
+          }
+        },
+        {
+          "name": "P14 - GET search=%20Anh%20 (Trim khoảng trắng trước khi tìm)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Data là mảng được trim thành công\", function () {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    json.data.forEach(function(sv) {",
+                  "        pm.expect(sv.hoTen.toLowerCase()).to.include('anh');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?search=%20Anh%20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "search", "value": " Anh "}] }
+          }
+        },
+        {
+          "name": "P15 - GET search 81 ký tự (Chặn từ khóa quá 80 ký tự 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.expect(json.success).to.eql(false);",
+                  "pm.expect(json.status).to.eql(400);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?search=01234567890123456789012345678901234567890123456789012345678901234567890123456789a", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "search", "value": "01234567890123456789012345678901234567890123456789012345678901234567890123456789a"}] }
+          }
+        },
+        {
+          "name": "P16 - GET page=2&limit=2 (Kiểm chứng OFFSET / FETCH và ORDER BY)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Phân trang SQL Server trả đúng page=2, limit=2\", function () {",
+                  "    pm.expect(json.pagination.page).to.eql(2);",
+                  "    pm.expect(json.pagination.limit).to.eql(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=2&limit=2", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "2"}, {"key": "limit", "value": "2"}] }
+          }
+        },
+        {
+          "name": "P17 - GET theo mã SV (Hồi quy CRUD không bị phá vỡ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Hợp đồng GET theo mã giữ nguyên status 200 hoặc 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Không chứa pagination metadata ở cấp root của GET theo mã\", function () {",
+                  "    pm.expect(json).to.not.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/SV001", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "SV001"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Error Handling (E01 - E10)",
+      "item": [
+        {
+          "name": "E01 - Query page âm (Bắt 400, success=false, data=null)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Chuẩn phản hồi lỗi: success=false, status=400, data=null\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(400);",
+                  "    pm.expect(json.data).to.eql(null);",
+                  "    pm.expect(json.message).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?page=-5", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "page", "value": "-5"}] }
+          }
+        },
+        {
+          "name": "E02 - Query limit chữ (Bắt 400 trước Database)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", function () { pm.response.to.have.status(400); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Chuẩn phản hồi lỗi: success=false, status=400, data=null\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(400);",
+                  "    pm.expect(json.data).to.eql(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien?limit=abc", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien"], "query": [{"key": "limit", "value": "abc"}] }
+          }
+        },
+        {
+          "name": "E03 - GET sinh viên không tồn tại (Bắt 404 nhất quán)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", function () { pm.response.to.have.status(404); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Chuẩn phản hồi 404: success=false, status=404, data=null\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(404);",
+                  "    pm.expect(json.data).to.eql(null);",
+                  "    pm.expect(json.message).to.include(\"Không tìm thấy\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/SV999", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "SV999"] }
+          }
+        },
+        {
+          "name": "E04 - Gọi URL không tồn tại (Fallback 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", function () { pm.response.to.have.status(404); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Fallback 404 trả đúng định dạng chuẩn\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(404);",
+                  "    pm.expect(json.message).to.include(\"Không tìm thấy đường dẫn\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/duong-dan-khong-co", "host": ["{{baseUrl}}"], "path": ["duong-dan-khong-co"] }
+          }
+        },
+        {
+          "name": "E05 - Lỗi 500 mô phỏng trong development (Không lộ SQL/secret)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 500 Internal Server Error\", function () { pm.response.to.have.status(500); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"success=false, status=500\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(500);",
+                  "});",
+                  "pm.test(\"Không để lộ thông tin nhạy cảm (password, connection string, sql)\", function () {",
+                  "    var str = JSON.stringify(json).toLowerCase();",
+                  "    pm.expect(str).to.not.include(\"password\");",
+                  "    pm.expect(str).to.not.include(\"database=\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/test-500", "host": ["{{baseUrl}}"], "path": ["test-500"] }
+          }
+        },
+        {
+          "name": "E06 - Lỗi 500 cấu hình production (Không có stack trace, message an toàn)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 500 Internal Server Error\", function () { pm.response.to.have.status(500); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Status và success chuẩn 500\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(500);",
+                  "});",
+                  "if (!json.stack) {",
+                  "    pm.test(\"Khi ở production: message an toàn và không có stack\", function () {",
+                  "        pm.expect(json.message).to.eql(\"Lỗi hệ thống, vui lòng thử lại sau\");",
+                  "        pm.expect(json).to.not.have.property('stack');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/test-500", "host": ["{{baseUrl}}"], "path": ["test-500"] }
+          }
+        },
+        {
+          "name": "E07 - Lỗi 500 cấu hình development (Có trường stack hỗ trợ debug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 500 Internal Server Error\", function () { pm.response.to.have.status(500); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Status và success chuẩn 500\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(500);",
+                  "});",
+                  "if (json.stack) {",
+                  "    pm.test(\"Khi ở development: có trường stack để lập trình viên tra cứu\", function () {",
+                  "        pm.expect(json.stack).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/test-500", "host": ["{{baseUrl}}"], "path": ["test-500"] }
+          }
+        },
+        {
+          "name": "E08 - GET /api/auth/profile thiếu token (Chặn 401 Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 401 Unauthorized\", function () { pm.response.to.have.status(401); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Auth cũ vẫn chặn chính xác\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        },
+        {
+          "name": "E09 - Student ép gọi DELETE sinh viên (Chặn 403 Forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 403 Forbidden\", function () { pm.response.to.have.status(403); });",
+                  "var json = pm.response.json();",
+                  "pm.test(\"RBAC cũ vẫn chặn student xóa dữ liệu\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.status).to.eql(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/sinh-vien/{{testMaSV}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "sinh-vien", "{{testMaSV}}"] }
+          }
+        },
+        {
+          "name": "E10 - Upload thiếu file hoặc file lỗi (Chặn 400 / 413 theo Multer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 400 hoặc 413\", function () {",
+                  "    pm.expect([400, 413]).to.include(pm.response.code);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Multer error JSON đúng quy định\", function () {",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect([400, 413]).to.include(json.status);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me", "avatar"] }
+          }
+        }
+      ]
+    }
+  ]
+}

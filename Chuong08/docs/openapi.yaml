@@ -1,0 +1,695 @@
+openapi: 3.0.3
+
+info:
+  title: API Quản lý sinh viên
+  version: 1.0.0
+  description: RESTful CRUD SinhVien + Zod Validation + Morgan Logging + JWT Authentication & RBAC - Thực hành Chương 6.
+
+servers:
+  - url: /
+    description: Cùng host và port với Express
+
+tags:
+  - name: Auth
+    description: Xác thực người dùng và cấp JWT Token
+  - name: SinhVien
+    description: Quản lý sinh viên
+
+paths:
+  /health:
+    get:
+      tags:
+        - SinhVien
+      summary: Kiểm tra server đang hoạt động
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server đang hoạt động
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  message:
+                    type: string
+                    example: Backend đang hoạt động
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: ok
+
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Đăng ký tài khoản người dùng
+      operationId: register
+      description: Đăng ký tài khoản mới. Mật khẩu được băm bằng bcrypt, mặc định vai trò là student.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Đăng ký tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Đăng nhập hệ thống
+      operationId: login
+      description: Kiểm tra email và mật khẩu, trả về JWT access token thời hạn 1 giờ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công, cấp JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/profile:
+    get:
+      tags:
+        - Auth
+      summary: Xem thông tin hồ sơ cá nhân
+      operationId: getProfile
+      description: Yêu cầu JWT token hợp lệ trong header Authorization Bearer.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy hồ sơ thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/me/avatar:
+    post:
+      tags:
+        - Auth
+      summary: Tải lên ảnh đại diện cho người dùng hiện tại
+      operationId: uploadAvatar
+      description: Nhận 1 file ảnh trường "avatar", dung lượng tối đa 2MB, định dạng JPEG hoặc PNG.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: File ảnh tải lên
+      responses:
+        '200':
+          description: Cập nhật ảnh đại diện thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  message:
+                    type: string
+                    example: Cập nhật ảnh đại diện thành công
+                  data:
+                    type: object
+                    required: [avatarUrl]
+                    properties:
+                      avatarUrl:
+                        type: string
+                        example: /uploads/e69abde4-9fa8-48b8-b80c-c6f376cf6ca7.png
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Dung lượng file vượt quá giới hạn 2MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/sinh-vien:
+    get:
+      tags:
+        - SinhVien
+      summary: Lấy danh sách sinh viên có phân trang & tìm kiếm (Public)
+      operationId: getDanhSachSinhVien
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: Số thứ tự trang (mặc định 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          description: Số lượng sinh viên mỗi trang (1-50, mặc định 10)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+        - name: search
+          in: query
+          required: false
+          description: Từ khóa tìm kiếm theo họ tên (tối đa 80 ký tự)
+          schema:
+            type: string
+            maxLength: 80
+            default: ''
+          example: Nguyen
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinhVienListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - SinhVien
+      summary: Thêm sinh viên mới (Yêu cầu Admin)
+      operationId: taoSinhVien
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SinhVien'
+      responses:
+        '201':
+          description: Tạo sinh viên thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinhVienResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/sinh-vien/{maSV}:
+    parameters:
+      - $ref: '#/components/parameters/MaSV'
+
+    get:
+      tags:
+        - SinhVien
+      summary: Lấy sinh viên theo mã (Public)
+      operationId: getSinhVienTheoMa
+      responses:
+        '200':
+          description: Tìm thấy sinh viên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinhVienResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - SinhVien
+      summary: Cập nhật thông tin sinh viên (Yêu cầu Admin)
+      operationId: capNhatSinhVien
+      description: >
+        Gửi đủ hoTen, email, maLop.
+        maSV được lấy từ URL, không lấy từ body.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SinhVienUpdate'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinhVienResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - SinhVien
+      summary: Xóa sinh viên theo mã (Yêu cầu Admin)
+      operationId: xoaSinhVien
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Nhập JWT Access Token vào ô Value (không cần tiền tố Bearer)
+
+  parameters:
+    MaSV:
+      name: maSV
+      in: path
+      required: true
+      description: Mã sinh viên cần thao tác
+      schema:
+        type: string
+        minLength: 1
+      example: SV003
+
+  schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - fullName
+        - email
+        - password
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 150
+          example: Nguyen Minh An
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          example: an.lab@example.com
+        password:
+          type: string
+          minLength: 6
+          format: password
+          example: SinhVien@123
+
+    ProfileResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Lấy thông tin hồ sơ thành công
+        data:
+          $ref: '#/components/schemas/UserResponse'
+
+    RegisterResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Đăng ký tài khoản thành công
+        data:
+          $ref: '#/components/schemas/UserResponse'
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+          example: Admin@123
+
+    LoginResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Đăng nhập thành công
+        data:
+          type: object
+          required:
+            - accessToken
+            - tokenType
+            - expiresIn
+            - user
+          properties:
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            tokenType:
+              type: string
+              example: Bearer
+            expiresIn:
+              type: string
+              example: 1h
+            user:
+              $ref: '#/components/schemas/UserResponse'
+
+    UserResponse:
+      type: object
+      required:
+        - id
+        - fullName
+        - email
+        - role
+      properties:
+        id:
+          type: integer
+          example: 1
+        fullName:
+          type: string
+          example: Quản trị viên
+        email:
+          type: string
+          example: admin@example.com
+        role:
+          type: string
+          example: admin
+        avatarUrl:
+          type: string
+          nullable: true
+          example: /uploads/e69abde4-9fa8-48b8-b80c-c6f376cf6ca7.png
+
+    SinhVien:
+      type: object
+      additionalProperties: false
+      required:
+        - maSV
+        - hoTen
+        - email
+        - maLop
+      properties:
+        maSV:
+          type: string
+          minLength: 5
+          maxLength: 5
+          pattern: '^SV[0-9]{3}$'
+          example: SV003
+        hoTen:
+          type: string
+          minLength: 1
+          maxLength: 150
+          example: Ngọc Mai
+        email:
+          type: string
+          minLength: 1
+          maxLength: 254
+          format: email
+          example: ngocmai@example.com
+        maLop:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: '25CT114'
+
+    SinhVienUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - hoTen
+        - email
+        - maLop
+      properties:
+        hoTen:
+          type: string
+          minLength: 1
+          maxLength: 150
+          example: Ngọc Mai Updated
+        email:
+          type: string
+          minLength: 1
+          maxLength: 254
+          format: email
+          example: ngocmai@example.com
+        maLop:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: '25CT114'
+
+    SinhVienResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Thao tác thành công
+        data:
+          $ref: '#/components/schemas/SinhVien'
+
+    PaginationMetadata:
+      type: object
+      required:
+        - page
+        - limit
+        - totalItems
+        - totalPages
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalItems:
+          type: integer
+          example: 45
+        totalPages:
+          type: integer
+          example: 5
+
+    SinhVienListResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - pagination
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Lấy danh sách thành công
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinhVien'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+
+    DeleteResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+          example: Xóa sinh viên thành công
+
+    ValidationIssue:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          example: email
+        message:
+          type: string
+          example: Email không hợp lệ
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - status
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Yêu cầu không thực hiện được
+        data:
+          type: object
+          nullable: true
+          example: null
+        errors:
+          type: array
+          description: Chi tiết lỗi Validation (nếu có)
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+        stack:
+          type: string
+          description: Stack trace (chỉ xuất hiện ở môi trường development)
+
+  responses:
+    BadRequest:
+      description: Dữ liệu đầu vào không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Chưa xác thực hoặc Token không hợp lệ / hết hạn
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Không có quyền truy cập (yêu cầu quyền Admin)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Không tìm thấy sinh viên
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Dữ liệu đã tồn tại (trùng mã sinh viên hoặc trùng email)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Lỗi ngoài dự kiến trên server
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
